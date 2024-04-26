@@ -2,7 +2,7 @@ from algorithm.functional import parallelize
 from math.bit import cttz
 from benchmark import keep
 
-alias b64_semicolon: UInt64 = 0x3B3B3B3B3B3B3B3B
+alias b64_semicolon: UInt64 =  0x3B3B3B3B3B3B3B3B
 alias b64_0x01: UInt64 = 0x0101010101010101
 alias b64_0x80: UInt64 = 0x8080808080808080
 alias b64_dot = 0x10101000
@@ -25,8 +25,10 @@ struct Measurement:
 
 
 @always_inline
-fn get_64_p(nums: DTypePointer[DType.int8], offset: Int) -> DTypePointer[DType.uint64]:
-    var p = Pointer(nums.offset(offset).address)
+fn get_64_p(
+    nums: DTypePointer[DType.int8], offset: Int
+) -> DTypePointer[DType.uint64]:
+    var p = nums.offset(offset).address
     return DTypePointer(p).bitcast[DType.uint64]()
 
 
@@ -47,7 +49,7 @@ fn process_line(chars: DTypePointer[DType.int8], offset: Int) -> Measurement:
         var has_semicolon = (diff - b64_0x01) & (~diff & b64_0x80)
         if has_semicolon != 0:
             var name_len = cttz(has_semicolon) >> 3
-            endname = endname + 8 * i + name_len.to_int()
+            endname = endname + 8 * i + int(name_len)
             break
 
     var composite = get_64_p(chars, endname)[0]
@@ -66,7 +68,7 @@ alias dash = String("-").as_bytes()[0]
 alias dot = String(".").as_bytes()[0]
 
 alias amount_lines = 1_000_000_000
-alias byte_chunk_size = 2 * 1024 * 1024  # TODO: can this be autotuned?
+alias byte_chunk_size = 2 * 1024 * 1024  # TODO: can this be autotuned or setup according to CPU cache size?
 alias max_line_len = 32
 alias min_line_len = 6
 alias iterations = amount_lines * max_line_len // byte_chunk_size
@@ -85,7 +87,7 @@ fn run() raises:
         var size = data.size
         if size == 0:
             break
-        var chars = DTypePointer(Pointer(data.data.value))
+        var chars = DTypePointer(data.data)
         var upto = size
         if size == byte_chunk_size:
             for i in range(1, max_line_len):
