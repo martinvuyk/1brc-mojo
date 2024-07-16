@@ -6,8 +6,8 @@ from benchmark import keep
 alias b8_semicolon: UInt8 = 0x3B
 alias b8_0x01: UInt8 = 0x01
 alias b8_0x80: UInt8 = 0x80
-alias b64_dot: UInt64 = 0x1010101010101010
-alias multiplier = (100 * 0x1000000 + 10 * 0x10000 + 0x1)
+alias b64_dot: UInt64 = 0x10_10_10_10_10_10_10_10
+alias multiplier = (100 * 0x1_00_00_00 + 10 * 0x1_00_00 + 1)
 
 
 @value
@@ -44,8 +44,8 @@ fn process_line(chars: DTypePointer[DType.uint8], offset: Int) -> Measurement:
     var signed = (~composite << 59) >> 63
     var mask = ~(signed & 0xFF)
     var tz_dot = count_trailing_zeros(~composite & b64_dot)
-    var digits = ((composite & mask) << (28 - tz_dot)) & 0x0F000F0F00
-    var value = ((digits * multiplier) >> 32) & 0x3FF
+    var digits = ((composite & mask) << (28 - tz_dot)) & 0x0F_00_0F_0F_00
+    var value = ((digits * multiplier) >> 32) & 0x3_FF
     var num = (value ^ signed) - signed
     return Measurement(hash_repr, num.cast[DType.int16]())
 
