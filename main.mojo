@@ -26,11 +26,12 @@ fn process_line(chars: DTypePointer[DType.uint8], offset: Int) -> Measurement:
     var hash_repr = 0
 
     # max 24 byte long name
-    var b8 = (chars + startname).simd_strided_load[32](1)
-    var diff = b8 ^ b8_semicolon
-    var has_semicolon = (diff - b8_0x01) & (~diff & b8_0x80)
-    var name_len = count_trailing_zeros(has_semicolon) >> 3
-    endname += int(name_len)
+    for i in range(2):
+        var b8 = (chars + startname + i * 16).simd_strided_load[16](1)
+        var diff = b8 ^ b8_semicolon
+        var has_semicolon = (diff - b8_0x01) & (~diff & b8_0x80)
+        if has_semicolon != 0:
+            endname += i * 16 + int(count_trailing_zeros(has_semicolon) >> 3)
 
     var composite = (chars + startname).bitcast[
         DType.uint64
