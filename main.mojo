@@ -1,20 +1,12 @@
 from algorithm.functional import parallelize
-from math.bit import cttz
+from bit import count_trailing_zeros
 from benchmark import keep
 
-alias b64_semicolon: UInt64 =  0x3B3B3B3B3B3B3B3B
-alias b64_0x01: UInt64 = 0x0101010101010101
-alias b64_0x80: UInt64 = 0x8080808080808080
-alias b64_dot = 0x10101000
+alias b8_semicolon: UInt8 = 0x3B
+alias b8_0x01: UInt8 = 0x01
+alias b8_0x80: UInt8 = 0x80
+alias b64_dot: UInt64 = 0x1010101010101010
 alias multiplier = (100 * 0x1000000 + 10 * 0x10000 + 0x1)
-
-
-# This wasn't used in the end but it's cool nonetheless
-@always_inline
-fn match_3num(num100: Int = 0, num10: Int = 0, num00: Int = 0) -> Int:
-    """Match 3 consecutive UTF-8 number strings to its Int representation."""
-    var digits = num100 << 8 | num10 << 16 | num00 << 32
-    return (((digits ^ 0x303030) * multiplier) >> 32) & 0x3FF
 
 
 @value
@@ -24,38 +16,28 @@ struct Measurement:
     var num: Int16
 
 
-@always_inline
-fn get_64_p(
-    nums: DTypePointer[DType.int8], offset: Int
-) -> DTypePointer[DType.uint64]:
-    var p = nums.offset(offset).address
-    return DTypePointer(p).bitcast[DType.uint64]()
-
-
-fn process_line(chars: DTypePointer[DType.int8], offset: Int) -> Measurement:
+fn process_line(chars: DTypePointer[DType.uint8], offset: Int) -> Measurement:
     var startname = 0
     if offset != 0:
         startname = offset + 1
     var endname = startname
-    var b64_p = get_64_p(chars, startname)
 
     # TODO: progressive hash
     var hash_repr = 0
 
     # max 24 byte long name
-    for i in range(3):
-        var b64 = b64_p[i]
-        var diff = b64 ^ b64_semicolon
-        var has_semicolon = (diff - b64_0x01) & (~diff & b64_0x80)
-        if has_semicolon != 0:
-            var name_len = cttz(has_semicolon) >> 3
-            endname = endname + 8 * i + int(name_len)
-            break
+    var b8 = (chars + startname).simd_strided_load[32](1)
+    var diff = b8 ^ b8_semicolon
+    var has_semicolon = (diff - b8_0x01) & (~diff & b8_0x80)
+    var name_len = count_trailing_zeros(has_semicolon) >> 3
+    endname += int(name_len)
 
-    var composite = get_64_p(chars, endname)[0]
+    var composite = (chars + startname).bitcast[
+        DType.uint64
+    ]().simd_strided_load[1](1)
     var signed = (~composite << 59) >> 63
     var mask = ~(signed & 0xFF)
-    var tz_dot = cttz(~composite & b64_dot)
+    var tz_dot = count_trailing_zeros(~composite & b64_dot)
     var digits = ((composite & mask) << (28 - tz_dot)) & 0x0F000F0F00
     var value = ((digits * multiplier) >> 32) & 0x3FF
     var num = (value ^ signed) - signed
@@ -63,15 +45,13 @@ fn process_line(chars: DTypePointer[DType.int8], offset: Int) -> Measurement:
 
 
 alias eol = String("\n").as_bytes()[0]
-alias semicolon = String(";").as_bytes()[0]
-alias dash = String("-").as_bytes()[0]
-alias dot = String(".").as_bytes()[0]
 
 alias amount_lines = 1_000_000_000
-alias byte_chunk_size = 2 * 1024 * 1024  # TODO: can this be autotuned or setup according to CPU cache size?
+# TODO: can this be autotuned or setup according to CPU L3 cache size?
+alias byte_chunk_size: Int = 2 * 1024
 alias max_line_len = 32
 alias min_line_len = 6
-alias iterations = amount_lines * max_line_len // byte_chunk_size
+alias iterations = (amount_lines * max_line_len) // byte_chunk_size
 alias max_items_per_chunk = byte_chunk_size // min_line_len
 alias max_num_measurements = max_items_per_chunk * iterations
 

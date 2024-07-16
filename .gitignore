@@ -1,2 +1,5 @@
 1brc-main/
 main
+*.mojo
+*.py
+!(main.mojo)
