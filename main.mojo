@@ -24,13 +24,13 @@ fn process_line(chars: DTypePointer[DType.uint8], offset: Int) -> Measurement:
     # TODO: progressive hash
     var hash_repr = 0
 
-    # max 24 byte long name
-    for i in range(3):
+    for i in range(3):  # max 24 byte long name
         var b8 = (chars + startname + i * 8).simd_strided_load[8](1)
         var diff = b8 ^ b8_semicolon
         var has_semicolon = (diff - b8_0x01) & (~diff & b8_0x80)
         if has_semicolon != 0:
             endname += i * 8 + int(count_trailing_zeros(has_semicolon) >> 3)
+            break
 
     var buf = (chars + startname)
     var composite: UInt64
@@ -88,8 +88,8 @@ fn run() raises:
                 return
             var measurement = process_line(chars, i)
             keep(measurement)
-            # hashes.store(i, measurement.hash_repr)
-            # nums.store(i, measurement.num)
+            # hashes[i] = measurement.hash_repr
+            # nums[i] = measurement.num
 
         parallelize[process_lines](upto - 1)
         data.clear()
