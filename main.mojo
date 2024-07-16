@@ -17,9 +17,7 @@ struct Measurement:
 
 
 fn process_line(chars: DTypePointer[DType.uint8], offset: Int) -> Measurement:
-    var startname = 0
-    if offset != 0:
-        startname = offset + 1
+    var startname = 0 if offset == 0 else offset + 1
     var endname = startname
 
     # TODO: progressive hash
