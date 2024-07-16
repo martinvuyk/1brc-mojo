@@ -1,5 +1,6 @@
 from algorithm.functional import parallelize
 from bit import count_trailing_zeros
+from sys import info
 from benchmark import keep
 
 alias b8_semicolon: UInt8 = 0x3B
@@ -31,9 +32,15 @@ fn process_line(chars: DTypePointer[DType.uint8], offset: Int) -> Measurement:
         if has_semicolon != 0:
             endname += i * 16 + int(count_trailing_zeros(has_semicolon) >> 3)
 
-    var composite = (chars + startname).bitcast[
-        DType.uint64
-    ]().simd_strided_load[1](1)
+    var buf = (chars + startname)
+    var composite: UInt64
+
+    @parameter
+    if info.is_little_endian():
+        var val = buf.simd_strided_load[4](1).shuffle[3, 2, 1, 0]()
+        composite = val.cast[DType.uint64]()
+    else:
+        composite = buf.bitcast[DType.uint64]().simd_strided_load[1](1)
     var signed = (~composite << 59) >> 63
     var mask = ~(signed & 0xFF)
     var tz_dot = count_trailing_zeros(~composite & b64_dot)
