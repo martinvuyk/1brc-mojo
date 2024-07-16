@@ -48,7 +48,7 @@ alias eol = String("\n").as_bytes()[0]
 
 alias amount_lines = 1_000_000_000
 # TODO: can this be autotuned or setup according to CPU L3 cache size?
-alias byte_chunk_size: Int = 2 * 1024
+alias byte_chunk_size: Int = 2 * 1024 * 1024
 alias max_line_len = 32
 alias min_line_len = 6
 alias iterations = (amount_lines * max_line_len) // byte_chunk_size
