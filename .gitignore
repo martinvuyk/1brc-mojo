@@ -3,3 +3,10 @@ main
 *.mojo
 *.py
 !(main.mojo)
+# pixi environments
+.pixi
+*.egg-info
+# magic environments
+.magic
+
+*.mojopkg
